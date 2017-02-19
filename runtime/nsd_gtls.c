@@ -1709,7 +1709,7 @@ Connect(nsd_t *pNsd, int family, uchar *port, uchar *host, char *device)
 	pThis->bHaveSess = 1;
 	pThis->bIsInitiator = 1;
 
-	gnutls_server_name_set(pThis->sess, GNUTLS_NAME_DNS, host, ustrlen(host));
+	CHKgnutls(gnutls_server_name_set(pThis->sess, GNUTLS_NAME_DNS, host, ustrlen(host)));
 
 	/* in the client case, we need to set a callback that ensures our certificate
 	 * will be presented to the server even if it is not signed by one of the server's
