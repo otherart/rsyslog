@@ -1678,6 +1678,31 @@ EnableKeepAlive(nsd_t *pNsd)
 	return nsd_ptcp.EnableKeepAlive(pThis->pTcp);
 }
 
+
+/*
+ * SNI should not be used if the hostname is a bare IP address
+ */
+int set_server_name_if_present(nsd_gtls_t *pThis, uchar *host) {
+	struct sockaddr_in sa;
+	struct sockaddr_in6 sa6;
+
+	int inet_pton_ret = inet_pton(AF_INET, CHAR_CONVERT(host), &(sa.sin_addr));
+
+	if (inet_pton_ret == 0) { // host wasn't a bare IPv4 address: try IPv6
+		inet_pton_ret = inet_pton(AF_INET6, CHAR_CONVERT(host), &(sa6.sin6_addr));
+	}
+
+	switch(inet_pton_ret) {
+		case 1: // host is a valid IP address: don't use SNI
+			return 0;
+		case 0: // host isn't a valid IP address: assume it's a domain name, use SNI
+			return gnutls_server_name_set(pThis->sess, GNUTLS_NAME_DNS, host, ustrlen(host));
+		case -1: // unexpected error
+			return -1;
+	}
+
+}
+
 /* open a connection to a remote host (server). With GnuTLS, we always
  * open a plain tcp socket and then, if in TLS mode, do a handshake on it.
  * rgerhards, 2008-03-19
@@ -1709,7 +1734,7 @@ Connect(nsd_t *pNsd, int family, uchar *port, uchar *host, char *device)
 	pThis->bHaveSess = 1;
 	pThis->bIsInitiator = 1;
 
-	CHKgnutls(gnutls_server_name_set(pThis->sess, GNUTLS_NAME_DNS, host, ustrlen(host)));
+	CHKgnutls(set_server_name_if_present(pThis, host));
 
 	/* in the client case, we need to set a callback that ensures our certificate
 	 * will be presented to the server even if it is not signed by one of the server's
