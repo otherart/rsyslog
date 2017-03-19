@@ -1682,7 +1682,8 @@ EnableKeepAlive(nsd_t *pNsd)
 /*
  * SNI should not be used if the hostname is a bare IP address
  */
-int set_server_name_if_present(nsd_gtls_t *pThis, uchar *host) {
+static int
+SetServerNameIfPresent(nsd_gtls_t *pThis, uchar *host) {
 	struct sockaddr_in sa;
 	struct sockaddr_in6 sa6;
 
@@ -1697,7 +1698,7 @@ int set_server_name_if_present(nsd_gtls_t *pThis, uchar *host) {
 			return 0;
 		case 0: // host isn't a valid IP address: assume it's a domain name, use SNI
 			return gnutls_server_name_set(pThis->sess, GNUTLS_NAME_DNS, host, ustrlen(host));
-		case -1: // unexpected error
+		default: // unexpected error
 			return -1;
 	}
 
@@ -1734,7 +1735,7 @@ Connect(nsd_t *pNsd, int family, uchar *port, uchar *host, char *device)
 	pThis->bHaveSess = 1;
 	pThis->bIsInitiator = 1;
 
-	CHKgnutls(set_server_name_if_present(pThis, host));
+	CHKgnutls(SetServerNameIfPresent(pThis, host));
 
 	/* in the client case, we need to set a callback that ensures our certificate
 	 * will be presented to the server even if it is not signed by one of the server's
